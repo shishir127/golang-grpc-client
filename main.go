@@ -1,34 +1,49 @@
 package main
 
 import (
+	"context"
+	"flag"
 	"fmt"
-	"log"
-	"net"
+	"io"
 
-	"github.com/shishir127/golang-grpc-server/spike"
+	"github.com/shishir127/golang-grpc-client/spike"
 	"google.golang.org/grpc"
 )
 
-const (
-	port = ":50051"
-)
-
-type server struct{}
-
-func (s *server) SayHello(request *spike.HelloRequest, stream spike.Streamer_SayHelloServer) error {
-	stream.Send(&spike.HelloReply{Message: "Hello " + request.Name})
-	return nil
-}
-
 func main() {
-	lis, err := net.Listen("tcp", port)
+	serverAddr := flag.String("server_addr", "127.0.0.1:50051", "The server address in the format of host:port")
+
+	conn, err := grpc.Dial(*serverAddr, grpc.WithInsecure())
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		fmt.Println("Error while establishing connection")
+		fmt.Println(err)
+		return
 	}
-	s := grpc.NewServer()
-	spike.RegisterStreamerServer(s, &server{})
-	fmt.Println("Starting server")
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+
+	defer conn.Close()
+
+	client := spike.NewStreamerClient(conn)
+
+	request := &spike.HelloRequest{Name: "Shishir"}
+	stream, err := client.SayHello(context.Background(), request)
+	if err != nil {
+		fmt.Println("Error while streaming")
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println("Reading stream from server")
+	for {
+		reply, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		fmt.Println(reply)
+		if err != nil {
+			fmt.Println(reply)
+		} else {
+			fmt.Println("Error in receiving message in stream")
+			fmt.Println(err)
+		}
 	}
 }

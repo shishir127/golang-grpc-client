@@ -3,4 +3,4 @@ grpc:
 
 build:
 	mkdir -p ../out
-	go build -o ../out/grpc-server
+	go build -o ../out/grpc-client
