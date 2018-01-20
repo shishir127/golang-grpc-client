@@ -9,10 +9,12 @@ import (
 
 	"github.com/shishir127/golang-grpc-client/spike"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 func main() {
 	port := os.Getenv("PORT")
+	accessToken := os.Getenv("TOKEN")
 	serverAddr := flag.String("server_addr", "127.0.0.1:"+port, "The server address in the format of host:port")
 
 	conn, err := grpc.Dial(*serverAddr, grpc.WithInsecure())
@@ -27,7 +29,9 @@ func main() {
 	client := spike.NewStreamerClient(conn)
 
 	request := &spike.HelloRequest{Name: "Shishir"}
-	stream, err := client.SayHello(context.Background(), request)
+	md := metadata.Pairs("Authorization", accessToken)
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+	stream, err := client.SayHello(ctx, request)
 	if err != nil {
 		fmt.Println("Error while streaming")
 		fmt.Println(err)
