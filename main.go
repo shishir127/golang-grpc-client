@@ -9,19 +9,38 @@ import (
 
 	"github.com/shishir127/golang-grpc-client/spike"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 )
 
 func main() {
 	port := os.Getenv("PORT")
 	accessToken := os.Getenv("TOKEN")
+	sslCertPath := os.Getenv("CERT")
 	serverAddr := flag.String("server_addr", "127.0.0.1:"+port, "The server address in the format of host:port")
-
-	conn, err := grpc.Dial(*serverAddr, grpc.WithInsecure())
-	if err != nil {
-		fmt.Println("Error while establishing connection")
-		fmt.Println(err)
-		return
+	var conn *grpc.ClientConn
+	var err error
+	if sslCertPath != "" {
+		creds, err := credentials.NewClientTLSFromFile(sslCertPath, "")
+		if err != nil {
+			fmt.Println("Error in loading TLS cert")
+			fmt.Println(err)
+			return
+		}
+		conn, err = grpc.Dial(*serverAddr, grpc.WithTransportCredentials(creds))
+		if err != nil {
+			fmt.Println("Error while establishing connection")
+			fmt.Println(err)
+			return
+		}
+	} else {
+		fmt.Println("Certs not found, starting insecure channel")
+		conn, err = grpc.Dial(*serverAddr, grpc.WithInsecure())
+		if err != nil {
+			fmt.Println("Error while establishing connection")
+			fmt.Println(err)
+			return
+		}
 	}
 
 	defer conn.Close()
